@@ -1,7 +1,10 @@
-from smbus2 import SMBus
+from MMA865xFC import MMA8653FC, twos_to_decimal
+import time
 
-with SMBus(1) as bus:
-    # Read a block of 16 bytes from address 80, offset 0
-    block = bus.read_byte_data(0x1d, 0) 
-    # Returned value is a list of 7 bytes
-    print(block)
+sensor = MMA8653FC()
+
+a = sensor.read_register("OUT_Z_MSB")
+print(bin(a))
+
+a = twos_to_decimal(a)
+print(a)
