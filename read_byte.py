@@ -1,4 +1,4 @@
-from MMA865xFC import MMA8653FC, twos_to_decimal
+from MMA8653FC import MMA8653FC, twos_to_decimal
 import time
 
 sensor = MMA8653FC()
