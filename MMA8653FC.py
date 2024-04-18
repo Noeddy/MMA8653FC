@@ -1,5 +1,25 @@
 from smbus2 import SMBus
 
+def twos_to_decimal(num, bits=8):
+    """
+    converts an 8-bit 2's complement binary number to decimal
+    
+    Args:
+    num(int):2's complement binary number to be converted
+    bits(int):length of the binary number, 8 by default
+    
+    Returns:
+    (int):decimal number
+    """
+    res = 0
+    max_val = 2 ** (bits - 1)
+    # Check if the number is negative
+    if num >= max_val:
+        # Convert from two's complement to decimal
+        res = num - (2 ** bits)
+    
+    return res
+
 class MMA8653FC():
 
     def __init__(self):
@@ -14,6 +34,10 @@ class MMA8653FC():
                           "WHO_AM_I" : 0x0D,
                           "XYZ_DATA_CFG" : 0x0E,
                           "CTRL_REG1" : 0x2A,
+                          "CTRL_REG2" : 0x2B,
+                          "CTRL_REG3" : 0x2C,
+                          "CTRL_REG4" : 0x2D,
+                          "CTRL_REG5" : 0x2E,
                           "OFF_X" : 0x2F,
                           "OFF_Y" : 0x30,
                           "OFF_Z" : 0x31}
@@ -160,41 +184,16 @@ class MMA8653FC():
             val = val ^ mask #flip the first bit
             self.write_register("CTRL_REG1", val) #write it at the correct register
     
-    def get_accel_8(self):
+    def get_accel(self):
         """
-        reads the acceleration value on 3 different axis with 8-bit resolution
+        reads the acceleration value on 3 different axis with 10-bit resolution
         
         Args:None
         
         Returns:
         (list):list of aacceleration values in order [x,y,z]
         """
+        raw = self.read_block("OUT_X_MSB", 6)
+        real = []
         
-
-
-
-
         
-
-
-
-    
-def twos_to_decimal(num, bits=8):
-    """
-    converts an 8-bit 2's complement binary number to decimal
-    
-    Args:
-    num(int):2's complement binary number to be converted
-    bits(int):length of the binary number, 8 by default
-    
-    Returns:
-    (int):decimal number
-    """
-    res = 0
-    max_val = 2 ** (bits - 1)
-    # Check if the number is negative
-    if num >= max_val:
-        # Convert from two's complement to decimal
-        res = num - (2 ** bits)
-    
-    return res

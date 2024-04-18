@@ -2,16 +2,33 @@ from MMA8653FC import MMA8653FC, twos_to_decimal
 import time
 
 sensor = MMA8653FC()
+sensor.set_active()
 
-a = sensor.get_range()
-print(a)
+dyn_range = sensor.get_range()
 
-sensor.set_range(4)
+a = sensor.read_register("CTRL_REG1")
+print(bin(a))
+b = sensor.read_register("STATUS")
+print(bin(b))
 
-a = sensor.get_range()
-print(a)
+while True:
+    z = sensor.read_register("OUT_Z_MSB")
+    #print(bin(z))
+    zb = sensor.read_register("OUT_Z_LSB")
+    #print(bin(zb))
 
-sensor.set_range(2)
+    combined = (z << 8) | zb
+    #print(bin(combined))
+    mask = 0b1111111111000000
+    cleared = (combined & mask) >> 6
+    #print(bin(cleared))
+    num = twos_to_decimal(cleared)
+    #print(num)
+    num = num/256
 
-a = sensor.get_range()
-print(a)
+    print(num)
+    time.sleep(0.05)
+
+
+
+
