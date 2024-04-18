@@ -78,7 +78,7 @@ class MMA8653FC():
     
     def get_range(self):
         """
-        reads the dynamic range the value can be either +- 2g, 4g, or 8g
+        reads the dynamic range, the value can be either +- 2g, 4g, or 8g
         
         Args:None
         
@@ -88,20 +88,79 @@ class MMA8653FC():
         b = self.read_register("XYZ_DATA_CFG")
 
         #get the last two bits
-        dyn_range = b & 0b11
+        val = b & 0b11
 
-        if dyn_range == 0b00:
-            dyn_range = 2
-        elif dyn_range == 0b01:
-            dyn_range = 4
-        elif dyn_range == 0b10:
-            dyn_range = 8
+        if val == 0b00:
+            val = 2
+        elif val == 0b01:
+            val = 4
+        elif val == 0b10:
+            val = 8
         else:
             raise ValueError("Wrong range, reverved value for FS0/1 bits")
         
-        return dyn_range
+        return val
     
-    def read_acceleration_8(self):
+    def set_range(self, val):
+        """
+        sets the dynamic range to the specified value between +- 2g, 4g and 8g
+        
+        Args:
+        val(int):value of the desired dynamic range
+        
+        Returns:None
+        """
+        ranges = [2,4,8]
+        if val not in ranges:
+            raise ValueError("The range must be either 2, 4 or 8")
+        else:
+            bits = [0b00, 0b01, 0b10]
+            i = ranges.index(val)
+
+            cfg = self.read_register("XYZ_DATA_CFG")
+
+            mask = 0b11111100
+
+            cfg &= mask #clear the last two bits
+
+            cfg ^= bits[i] #set to the desired value
+
+            #write the byte in standby mode
+            self.set_standby()
+            self.write_register("XYZ_DATA_CFG", cfg)
+            self.set_active()
+    
+    def set_active(self):
+        """
+        puts the accelerometer in active mode
+        
+        Args:None
+        
+        Returns:None
+        """
+        val = self.read_register("CTRL_REG1")
+        mask = 0b1
+
+        if (val & mask) == 0: #if inactive
+            val = val ^ mask #flip the first bit
+            self.write_register("CTRL_REG1", val) #write it at the correct register
+
+    def set_standby(self):
+        """
+        puts the accelerometer in standby mode
+        
+        Args:None
+        
+        Returns:None
+        """
+        val = self.read_register("CTRL_REG1")
+        mask = 0b1
+
+        if (val & mask) == 1: #if active
+            val = val ^ mask #flip the first bit
+            self.write_register("CTRL_REG1", val) #write it at the correct register
+    
+    def get_accel_8(self):
         """
         reads the acceleration value on 3 different axis with 8-bit resolution
         
@@ -110,20 +169,7 @@ class MMA8653FC():
         Returns:
         (list):list of aacceleration values in order [x,y,z]
         """
-        raw = self.read_block("OUT_X_MSB", 6)
-        dyn_range = self.get_range()
-        res = []
-
-        for i in [0,2,4]:
-            #convert from 2's complement to decimal
-            val = twos_to_decimal(raw[i])
-
-            #compute the acceleration values in g
-            val = val*(dyn_range/256)
-            res.append(val)
-
-        return res
-
+        
 
 
 

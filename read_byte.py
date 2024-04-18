@@ -3,8 +3,15 @@ import time
 
 sensor = MMA8653FC()
 
-a = sensor.read_register("OUT_Z_MSB")
-print(bin(a))
+a = sensor.get_range()
+print(a)
 
-a = twos_to_decimal(a)
+sensor.set_range(4)
+
+a = sensor.get_range()
+print(a)
+
+sensor.set_range(2)
+
+a = sensor.get_range()
 print(a)
