@@ -1,6 +1,6 @@
 from smbus2 import SMBus
 
-def twos_to_decimal(num, bits=8):
+def twos_to_decimal(hi, low, bits=10):
     """
     converts an 8-bit 2's complement binary number to decimal
     
@@ -11,13 +11,12 @@ def twos_to_decimal(num, bits=8):
     Returns:
     (int):decimal number
     """
-    res = 0
-    max_val = 2 ** (bits - 1)
-    # Check if the number is negative
-    if num >= max_val:
-        # Convert from two's complement to decimal
-        res = num - (2 ** bits)
-    
+    low = (low >> 6)
+    res = (hi << (bits-8)) | low
+
+    if hi >= 128: #if negative
+        res = ~res +1
+        
     return res
 
 class MMA8653FC():
@@ -183,17 +182,66 @@ class MMA8653FC():
         if (val & mask) == 1: #if active
             val = val ^ mask #flip the first bit
             self.write_register("CTRL_REG1", val) #write it at the correct register
-    
-    def get_accel(self):
+
+    def is_active(self):
         """
-        reads the acceleration value on 3 different axis with 10-bit resolution
+        checks if the device is active
+        
+        Args:None
+        Returns: 
+        (bool):wether device active or not
+        """
+        val = self.read_register("CTRL_REG1")
+        mask = 0b1
+
+        return (val & mask) == 1
+    
+    def fast_read(self, val):
+        """
+        sets fast read to on or off
+        Args:
+        val(int): 0 to disable 1 to enable fast read
+        Returns:None
+        """
+        if val in [0,1]:
+            ctrl = self.read_register("CTRL_REG1")
+            mask = 0b10
+            if (ctrl & mask)>>1 != val: 
+                ctrl ^= mask #flips the F_READ bit
+
+                self.set_standby()
+                self.write_register("CTRL_REG1", ctrl)
+                self.set_active()
+        else:
+            raise ValueError("Value of the argument must be either 0 or 1")
+    
+    def get_acceleration(self):
+        """
+        reads the acceleration value on 3 different axis with 10-bit resolution. Be sure to enable fast read before calling this method
         
         Args:None
         
         Returns:
         (list):list of aacceleration values in order [x,y,z]
         """
-        raw = self.read_block("OUT_X_MSB", 6)
-        real = []
+        status = self.read_register("STATUS")
+        if (status & 0b100)>>2 == 1: #checks if ZYXDR is set
+            real = self.read_block("OUT_X_MSB", 6)
+            res = []
+            dyn_range = self.get_range()
+
+            for i in [0,1,3]:
+                hi = real[i]
+                low = real[i+1]
+
+                counts = twos_to_decimal(hi, low)
+                val = counts*(dyn_range/512)
+
+                res.append(val)
+        
+        else:
+            raise RuntimeError("No new data to read, try activating the device with MMA8653FC.set_active()")
+
+        return res
         
         
