@@ -6,18 +6,35 @@ def twos_to_decimal(hi, low, bits=10):
     
     Args:
     num(int):2's complement binary number to be converted
-    bits(int):length of the binary number, 8 by default
+    bits(int):length of the binary number, 10 by default
     
     Returns:
     (int):decimal number
     """
     low = (low >> 6)
-    res = (hi << (bits-8)) | low
+    res = (hi << (bits-8)) | low #combine the high and low bytes
 
     if hi >= 128: #if negative
-        res = ~res +1
+        res = ~res +1 #compute the two's complement
         
     return res
+
+def decimal_to_twos(val):
+    """
+    converts a decimal number to its two's complement
+    Args:
+    num(int):decimal number to be converted to 2's complement
+    bits(int):length of the binary number, 10 by default
+    
+    Returns:
+    (int):two's complement binary number
+    """
+    if val < 0: #if the number is negative
+        val = abs(val)
+        val = ~val + 1 #compute the two's complement of the absolute value
+
+    return val
+
 
 class MMA8653FC():
 
@@ -40,6 +57,8 @@ class MMA8653FC():
                           "OFF_X" : 0x2F,
                           "OFF_Y" : 0x30,
                           "OFF_Z" : 0x31}
+        
+        self.dyn_range = self.get_range()
         
     def read_register(self, reg):
         """
@@ -134,24 +153,27 @@ class MMA8653FC():
         Returns:None
         """
         ranges = [2,4,8]
-        if val not in ranges:
-            raise ValueError("The range must be either 2, 4 or 8")
-        else:
-            bits = [0b00, 0b01, 0b10]
-            i = ranges.index(val)
+        if val != self.dyn_range:
+            if val not in ranges:
+                raise ValueError("The range must be either 2, 4 or 8")
+            else:
+                bits = [0b00, 0b01, 0b10]
+                i = ranges.index(val)
 
-            cfg = self.read_register("XYZ_DATA_CFG")
+                cfg = self.read_register("XYZ_DATA_CFG")
 
-            mask = 0b11111100
+                mask = 0b11111100
 
-            cfg &= mask #clear the last two bits
+                cfg &= mask #clear the last two bits
 
-            cfg ^= bits[i] #set to the desired value
+                cfg ^= bits[i] #set to the desired value
 
-            #write the byte in standby mode
-            self.set_standby()
-            self.write_register("XYZ_DATA_CFG", cfg)
-            self.set_active()
+                self.dyn_range = val
+
+                #write the byte in standby mode
+                self.set_standby()
+                self.write_register("XYZ_DATA_CFG", cfg)
+                self.set_active()
     
     def set_active(self):
         """
@@ -228,14 +250,13 @@ class MMA8653FC():
         if (status & 0b100)>>2 == 1: #checks if ZYXDR is set
             real = self.read_block("OUT_X_MSB", 6)
             res = []
-            dyn_range = self.get_range()
 
             for i in [0,1,3]:
                 hi = real[i]
                 low = real[i+1]
 
                 counts = twos_to_decimal(hi, low)
-                val = counts*(dyn_range/512)
+                val = counts*(self.dyn_range/512)
 
                 res.append(val)
         
@@ -243,5 +264,63 @@ class MMA8653FC():
             raise RuntimeError("No new data to read, try activating the device with MMA8653FC.set_active()")
 
         return res
+    
+    def set_offset_x(self, val):
+        """
+        sets the x-axis offset
+        Args:
+        val(float): value of the offset
+        Returns:None
+        """
+        counts = round((512*val)/self.dyn_range) #convert to the number of counts
+        mask = 0b1111111100 
+        counts = (counts & mask) >> 2 #keep only the 8 most significant bits
+        
+        #write it to the
+        #self.set_standby()
+        self.write_register("OFF_X",counts)
+        #self.set_active()
+
+    def set_offset_y(self, val):
+        """
+        sets the y-axis offset
+        Args:
+        val(float): value of the offset
+        Returns:None
+        """
+        counts = round((512*val)/self.dyn_range) #convert to the number of counts
+        mask = 0b1111111100 
+        counts = (counts & mask) >> 2 #keep only the 8 most significant bits
+        
+        #write it to the
+        self.set_standby()
+        self.write_register("OFF_Y",counts)
+        self.set_active()
+
+    def set_offset_z(self, val):
+        """
+        sets the z-axis offset
+        Args:
+        val(float): value of the offset
+        Returns:None
+        """
+        counts = round((512*val)/self.dyn_range) #convert to the number of counts
+        mask = 0b1111111100 
+        counts = (counts & mask) >> 2 #keep only the 8 most significant bits
+        
+        #write it to the
+        self.set_standby()
+        self.write_register("OFF_Z",counts)
+        self.set_active()
+
+    def reset_offsets(self):
+        """
+        resets all offset values
+        Args:None
+        Returns:None
+        """
+        self.set_offset_x(0)
+        self.set_offset_y(0)
+        self.set_offset_z(0)
         
         
