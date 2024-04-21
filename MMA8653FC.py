@@ -19,23 +19,6 @@ def twos_to_decimal(hi, low, bits=10):
         
     return res
 
-def decimal_to_twos(val):
-    """
-    converts a decimal number to its two's complement
-    Args:
-    num(int):decimal number to be converted to 2's complement
-    bits(int):length of the binary number, 10 by default
-    
-    Returns:
-    (int):two's complement binary number
-    """
-    if val < 0: #if the number is negative
-        val = abs(val)
-        val = ~val + 1 #compute the two's complement of the absolute value
-
-    return val
-
-
 class MMA8653FC():
 
     def __init__(self):
@@ -239,24 +222,26 @@ class MMA8653FC():
     
     def get_acceleration(self):
         """
-        reads the acceleration value on 3 different axis with 10-bit resolution. Be sure to enable fast read before calling this method
+        reads the acceleration value on 3 different axis with 10-bit resolution.
         
         Args:None
         
         Returns:
-        (list):list of aacceleration values in order [x,y,z]
+        (list):list of acceleration values in order [x,y,z]
         """
         status = self.read_register("STATUS")
         if (status & 0b100)>>2 == 1: #checks if ZYXDR is set
+            self.fast_read(0)
             real = self.read_block("OUT_X_MSB", 6)
             res = []
 
-            for i in [0,1,3]:
+
+            for i in [0,2,4]:
                 hi = real[i]
                 low = real[i+1]
 
                 counts = twos_to_decimal(hi, low)
-                val = counts*(self.dyn_range/512)
+                val = round(counts*(self.dyn_range/512), 3)
 
                 res.append(val)
         
@@ -277,9 +262,9 @@ class MMA8653FC():
         counts = (counts & mask) >> 2 #keep only the 8 most significant bits
         
         #write it to the
-        #self.set_standby()
+        self.set_standby()
         self.write_register("OFF_X",counts)
-        #self.set_active()
+        self.set_active()
 
     def set_offset_y(self, val):
         """
