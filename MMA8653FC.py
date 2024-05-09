@@ -250,6 +250,81 @@ class MMA8653FC():
 
         return res
     
+    def get_acceleration_x(self):
+        """
+        reads the acceleration value on the x-axis with 10-bit resolution.
+        
+        Args:None
+        
+        Returns:
+        (float):read axeleration value
+        """
+        status = self.read_register("STATUS")
+        if (status & 0b100)>>2 == 1: #checks if ZYXDR is set
+            self.fast_read(0)
+            real = self.read_block("OUT_X_MSB", 2)
+
+            hi = real[0]
+            low = real[1]
+
+            counts = twos_to_decimal(hi, low)
+            res = round(counts*(self.dyn_range/512), 3)
+        
+        else:
+            raise RuntimeError("No new data to read, try activating the device with MMA8653FC.set_active()")
+
+        return res
+    
+    def get_acceleration_y(self):
+        """
+        reads the acceleration value on the y-axis with 10-bit resolution.
+        
+        Args:None
+        
+        Returns:
+        (float):read axeleration value
+        """
+        status = self.read_register("STATUS")
+        if (status & 0b100)>>2 == 1: #checks if ZYXDR is set
+            self.fast_read(0)
+            real = self.read_block("OUT_Y_MSB", 2)
+
+            hi = real[0]
+            low = real[1]
+
+            counts = twos_to_decimal(hi, low)
+            res = round(counts*(self.dyn_range/512), 3)
+        
+        else:
+            raise RuntimeError("No new data to read, try activating the device with MMA8653FC.set_active()")
+
+        return res
+
+    def get_acceleration_z(self):
+        """
+        reads the acceleration value on the z-axis with 10-bit resolution.
+        
+        Args:None
+        
+        Returns:
+        (float):read axeleration value
+        """
+        status = self.read_register("STATUS")
+        if (status & 0b100)>>2 == 1: #checks if ZYXDR is set
+            self.fast_read(0)
+            real = self.read_block("OUT_Z_MSB", 2)
+
+            hi = real[0]
+            low = real[1]
+
+            counts = twos_to_decimal(hi, low)
+            res = round(counts*(self.dyn_range/512), 3)
+        
+        else:
+            raise RuntimeError("No new data to read, try activating the device with MMA8653FC.set_active()")
+
+        return res
+    
     def set_offset_x(self, val):
         """
         sets the x-axis offset
