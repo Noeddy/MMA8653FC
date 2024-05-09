@@ -10,7 +10,3 @@ while True:
     accel = sensor.get_acceleration()
     print(accel)
     time.sleep(0.2)
-
-
-
-
